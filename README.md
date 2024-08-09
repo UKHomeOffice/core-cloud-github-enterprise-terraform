@@ -1,1 +1,1 @@
-# core-cloud-github-enterprise-terraform
+# core-cloud-github-enterprise-terraform-module
