@@ -157,8 +157,8 @@ variable "sns_email" {
 }
 
 variable "public_subnet_ids" {
-  type = list(string)
-  default     = []
+  type    = list(string)
+  default = []
 }
 
 variable "ssm_logging_policy_name" {
