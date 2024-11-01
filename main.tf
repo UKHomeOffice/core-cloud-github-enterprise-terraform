@@ -346,7 +346,8 @@ resource "aws_instance" "github_instance" {
   EOF
 
   tags = {
-    Name = "github-enterprise-server-${each.key}"
+    Name        = "github-enterprise-server-${each.key}"
+    Environment = var.environment
   }
 }
 
@@ -469,7 +470,8 @@ resource "aws_instance" "backup_host" {
   EOF
 
   tags = {
-    Name = "github-backup-host"
+    Name        = "github-backup-host"
+    Environment = var.environment
   }
 }
 
