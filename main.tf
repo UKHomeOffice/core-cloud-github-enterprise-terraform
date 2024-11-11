@@ -348,6 +348,7 @@ resource "aws_instance" "github_instance" {
   tags = {
     Name        = "github-enterprise-server-${each.key}"
     Environment = var.environment
+    MonitoredBy = "Dynatrace"
   }
 }
 
@@ -472,6 +473,7 @@ resource "aws_instance" "backup_host" {
   tags = {
     Name        = "github-backup-host"
     Environment = var.environment
+    MonitoredBy = "Dynatrace"
   }
 }
 
