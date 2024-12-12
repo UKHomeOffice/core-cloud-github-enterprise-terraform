@@ -23,3 +23,13 @@ output "backup_host_id" {
 output "route53_zone_id" {
   value = length(var.route53_zone_name) > 0 ? data.aws_route53_zone.selected["selected"].zone_id : "Zone not managed by Terraform"
 }
+
+output "ses_domain_verification_status" {
+  description = "The verification status of the SES domain"
+  value       = var.create_ses_config ? aws_ses_domain_identity_verification.domain_verification[0].id : null
+}
+
+output "ses_dkim_tokens" {
+  description = "The DKIM tokens for the domain"
+  value       = var.create_ses_config ? aws_ses_domain_dkim.dkim[0].dkim_tokens : null
+}
