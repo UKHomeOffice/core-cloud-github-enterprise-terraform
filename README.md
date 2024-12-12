@@ -32,6 +32,8 @@ module "github_enterprise" {
   backup_host_ami_id      = "ami-0987654321abcdef"
   backup_host_instance_type = "t3.medium"
   backup_root_volume_size = 30
+  create_ses_config       = true
+  ses_domain_name         = "email.prelive.ci.core.homeoffice.gov.uk"
 }
 ```
 
@@ -65,3 +67,5 @@ module "github_enterprise" {
 | <a name="input_ssm_logging_policy_name"></a> [ssm\_logging\_policy_name](#input_ssm_logging_policy_name) | Name of the SSM logging policy | `string` | n/a | yes |
 | <a name="input_use_private_subnets"></a> [use_private_subnets](#input_use_private_subnets) | Flag to use private subnets for the NLB | `bool` | `n/a` | no |
 | <a name="input_vpc_id"></a> [vpc_id](#input_vpc_id) | ID of the VPC where resources are deployed | `string` | n/a | yes |
+| <a name="input_create_ses_config"></a> [create\_ses\_config](#input\_create_ses_config) | Flag to create SES configuration | `bool` | `false` | no |
+| <a name="input_ses_domain_name"></a> [ses\_domain\_name](#input\_ses_domain_name) | Domain name for SES configuration | `string` | `""` | no |

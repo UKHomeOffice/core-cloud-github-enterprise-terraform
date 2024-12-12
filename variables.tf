@@ -168,3 +168,15 @@ variable "ssm_logging_policy_name" {
 variable "use_private_subnets" {
   type = bool
 }
+
+variable "create_ses_config" {
+  description = "Flag to create SES configuration"
+  type        = bool
+  default     = false
+}
+
+variable "ses_domain_name" {
+  description = "Domain name for SES configuration"
+  type        = string
+  default     = ""
+}
