@@ -687,6 +687,7 @@ resource "aws_route53_record" "ses_dkim" {
   type    = "CNAME"
   ttl     = "600"
   records = ["${element(aws_ses_domain_dkim.dkim[0].dkim_tokens, count.index)}.dkim.amazonses.com"]
+  allow_overwrite = true
 }
 
 resource "aws_route53_record" "ses_spf" {
