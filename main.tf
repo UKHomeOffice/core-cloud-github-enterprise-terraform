@@ -345,11 +345,13 @@ resource "aws_instance" "github_instance" {
 
   EOF
 
-  tags = {
-    Name        = "github-enterprise-server-${each.key}"
-    Environment = var.environment
-    MonitoredBy = "Dynatrace"
-  }
+  tags = merge(
+    {
+      Name        = "github-enterprise-server-${each.key}",
+      MonitoredBy = "Dynatrace"
+    },
+    var.common_tags
+  )
 }
 
 resource "aws_eip" "github_eip" {
@@ -470,11 +472,13 @@ resource "aws_instance" "backup_host" {
       "${var.github_backup_image}"
   EOF
 
-  tags = {
-    Name        = "github-backup-host"
-    Environment = var.environment
-    MonitoredBy = "Dynatrace"
-  }
+  tags = merge(
+    {
+      Name        = "github-enterprise-server-${each.key}",
+      MonitoredBy = "Dynatrace"
+    },
+    var.common_tags
+  )
 }
 
 resource "aws_eip" "backup_eip" {
