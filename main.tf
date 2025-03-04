@@ -614,3 +614,114 @@ resource "aws_cloudwatch_metric_alarm" "disk_usage_alarm" {
   }
   alarm_actions = [aws_sns_topic.cloudwatch_alarm_topic.arn]
 }
+
+# SES IAM Configuration
+
+resource "aws_iam_policy" "ses_policy" {
+  count = var.create_ses_config ? 1 : 0
+
+  name        = "github-ses-policy-${var.environment}"
+  description = "Policy for SES access"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ses:SendEmail",
+          "ses:SendRawEmail",
+          "ses:GetIdentityVerificationAttributes",
+          "ses:GetIdentityDkimAttributes"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ses_policy_attachment" {
+  count = var.create_ses_config ? 1 : 0
+
+  role       = aws_iam_role.instance_management_role.name
+  policy_arn = aws_iam_policy.ses_policy[0].arn
+}
+
+# SES Domain Configuration
+resource "aws_ses_domain_identity" "ses_domain" {
+  count  = var.create_ses_config ? 1 : 0
+  domain = var.ses_domain_name
+}
+
+resource "aws_ses_domain_dkim" "dkim" {
+  count  = var.create_ses_config ? 1 : 0
+  domain = aws_ses_domain_identity.ses_domain[0].domain
+}
+
+resource "aws_ses_domain_mail_from" "mail_from" {
+  count = var.create_ses_config ? 1 : 0
+
+  domain           = aws_ses_domain_identity.ses_domain[0].domain
+  mail_from_domain = "mailfrom.${aws_ses_domain_identity.ses_domain[0].domain}"
+}
+
+resource "aws_route53_record" "ses_verification" {
+  count   = var.create_ses_config ? 1 : 0
+  zone_id = data.aws_route53_zone.selected["selected"].zone_id
+  name    = "_amazonses.${var.ses_domain_name}"
+  type    = "TXT"
+  ttl     = "600"
+  records = [aws_ses_domain_identity.ses_domain[0].verification_token]
+}
+
+resource "aws_ses_domain_identity_verification" "domain_verification" {
+  count  = var.create_ses_config ? 1 : 0
+  domain = aws_ses_domain_identity.ses_domain[0].id
+
+  depends_on = [aws_route53_record.ses_verification]
+}
+
+resource "aws_route53_record" "ses_dkim" {
+  count   = var.create_ses_config ? 3 : 0
+  zone_id = data.aws_route53_zone.selected["selected"].zone_id
+  name    = "${element(aws_ses_domain_dkim.dkim[0].dkim_tokens, count.index)}._domainkey.${var.ses_domain_name}"
+  type    = "CNAME"
+  ttl     = "600"
+  records = ["${element(aws_ses_domain_dkim.dkim[0].dkim_tokens, count.index)}.dkim.amazonses.com"]
+  allow_overwrite = true
+}
+
+resource "aws_route53_record" "ses_spf" {
+  count   = var.create_ses_config ? 1 : 0
+  zone_id = data.aws_route53_zone.selected["selected"].zone_id
+  name    = var.ses_domain_name
+  type    = "TXT"
+  ttl     = "600"
+  records = ["v=spf1 include:amazonses.com -all"]
+}
+
+resource "aws_route53_record" "ses_dmarc" {
+  count   = var.create_ses_config ? 1 : 0
+  zone_id = data.aws_route53_zone.selected["selected"].zone_id
+  name    = "_dmarc.${var.ses_domain_name}"
+  type    = "TXT"
+  ttl     = "600"
+  records = ["v=DMARC1;p=reject;sp=reject;rua=mailto:dmarc-rua@dmarc.service.gov.uk"]
+}
+
+resource "aws_route53_record" "ses_mail_from_mx" {
+  count   = var.create_ses_config ? 1 : 0
+  zone_id = data.aws_route53_zone.selected["selected"].zone_id
+  name    = aws_ses_domain_mail_from.mail_from[0].mail_from_domain
+  type    = "MX"
+  ttl     = "600"
+  records = ["10 feedback-smtp.eu-west-2.amazonses.com"]
+}
+
+resource "aws_route53_record" "ses_mail_from_txt" {
+  count   = var.create_ses_config ? 1 : 0
+  zone_id = data.aws_route53_zone.selected["selected"].zone_id
+  name    = aws_ses_domain_mail_from.mail_from[0].mail_from_domain
+  type    = "TXT"
+  ttl     = "600"
+  records = ["v=spf1 include:amazonses.com -all"]
+}
