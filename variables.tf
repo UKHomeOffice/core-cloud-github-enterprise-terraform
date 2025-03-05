@@ -169,6 +169,11 @@ variable "use_private_subnets" {
   type = bool
 }
 
+variable "common_tags" {
+  description = "Common tags to apply to all"
+  type        = map(string)
+  default     = {}
+}
 variable "create_ses_config" {
   description = "Flag to create SES configuration"
   type        = bool

@@ -109,9 +109,12 @@ resource "aws_security_group" "nlb_sg" {
   description = "Security group for Github Enterprise Server NLB ${each.value}"
   vpc_id      = var.vpc_id
 
-  tags = {
-    Name = "github-enterprise-nlb-sg-${each.key}"
-  }
+  tags = merge(
+    {
+      Name = "github-enterprise-nlb-sg-${each.key}"
+    },
+    var.common_tags
+  )
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nlb_ingress_rule" {
@@ -152,9 +155,12 @@ resource "aws_lb" "nlb" {
   subnets            = var.use_private_subnets ? var.private_subnet_ids : var.public_subnet_ids
   security_groups    = [each.value.id]
 
-  tags = {
-    Name = "github-enterprise-nlb-${each.key}"
-  }
+  tags = merge(
+    {
+      Name = "github-enterprise-nlb-${each.key}"
+    },
+    var.common_tags
+  )
 }
 
 resource "aws_lb_target_group" "tg" {
@@ -176,9 +182,12 @@ resource "aws_lb_target_group" "tg" {
     port     = "traffic-port"
   }
 
-  tags = {
-    Name = "tg-${each.value.nlb_key}-${var.port_to_name_map[each.value.port]}"
-  }
+  tags = merge(
+    {
+      Name = "tg-${each.value.nlb_key}-${var.port_to_name_map[each.value.port]}"
+    },
+    var.common_tags
+  )
 }
 
 resource "aws_lb_listener" "nlb_listener" {
@@ -220,9 +229,12 @@ resource "aws_security_group" "github_sg" {
   description = "Security group for GitHub Server ${each.value}"
   vpc_id      = var.vpc_id
 
-  tags = {
-    Name = "github-enterprise-server-sg-${each.key}"
-  }
+  tags = merge(
+    {
+      Name = "github-enterprise-server-sg-${each.key}"
+    },
+    var.common_tags
+  )
 }
 
 resource "aws_vpc_security_group_ingress_rule" "github_ingress_rules" {
@@ -345,11 +357,13 @@ resource "aws_instance" "github_instance" {
 
   EOF
 
-  tags = {
-    Name        = "github-enterprise-server-${each.key}"
-    Environment = var.environment
-    MonitoredBy = "Dynatrace"
-  }
+  tags = merge(
+    {
+      Name        = "github-enterprise-server-${each.key}",
+      MonitoredBy = "Dynatrace"
+    },
+    var.common_tags
+  )
 }
 
 resource "aws_eip" "github_eip" {
@@ -357,9 +371,12 @@ resource "aws_eip" "github_eip" {
   domain   = "vpc"
   instance = each.value.id
 
-  tags = {
-    Name = "github-enterprise-server-eip-${each.key}"
-  }
+  tags = merge(
+    {
+      Name = "github-enterprise-server-eip-${each.key}"
+    },
+    var.common_tags
+  )
 }
 
 resource "aws_security_group" "backup_host_sg" {
@@ -367,9 +384,12 @@ resource "aws_security_group" "backup_host_sg" {
   description = "Security group for the backup host"
   vpc_id      = var.vpc_id
 
-  tags = {
-    Name = "github-backup-host-sg"
-  }
+  tags = merge(
+    {
+      Name = "github-backup-host-sg"
+    },
+    var.common_tags
+  )
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nlb_ssh_122_from_backup_host" {
@@ -470,11 +490,13 @@ resource "aws_instance" "backup_host" {
       "${var.github_backup_image}"
   EOF
 
-  tags = {
-    Name        = "github-backup-host"
-    Environment = var.environment
-    MonitoredBy = "Dynatrace"
-  }
+  tags = merge(
+    {
+      Name        = "github-enterprise-server-backup-host",
+      MonitoredBy = "Dynatrace"
+    },
+    var.common_tags
+  )
 }
 
 resource "aws_eip" "backup_eip" {
@@ -482,9 +504,12 @@ resource "aws_eip" "backup_eip" {
   domain   = "vpc"
   instance = aws_instance.backup_host.id
 
-  tags = {
-    Name = "github-backup-host-eip"
-  }
+  tags = merge(
+    {
+      Name = "github-backup-host-eip",
+    },
+    var.common_tags
+  )
 }
 
 # Route53 records
@@ -681,12 +706,12 @@ resource "aws_ses_domain_identity_verification" "domain_verification" {
 }
 
 resource "aws_route53_record" "ses_dkim" {
-  count   = var.create_ses_config ? 3 : 0
-  zone_id = data.aws_route53_zone.selected["selected"].zone_id
-  name    = "${element(aws_ses_domain_dkim.dkim[0].dkim_tokens, count.index)}._domainkey.${var.ses_domain_name}"
-  type    = "CNAME"
-  ttl     = "600"
-  records = ["${element(aws_ses_domain_dkim.dkim[0].dkim_tokens, count.index)}.dkim.amazonses.com"]
+  count           = var.create_ses_config ? 3 : 0
+  zone_id         = data.aws_route53_zone.selected["selected"].zone_id
+  name            = "${element(aws_ses_domain_dkim.dkim[0].dkim_tokens, count.index)}._domainkey.${var.ses_domain_name}"
+  type            = "CNAME"
+  ttl             = "600"
+  records         = ["${element(aws_ses_domain_dkim.dkim[0].dkim_tokens, count.index)}.dkim.amazonses.com"]
   allow_overwrite = true
 }
 
