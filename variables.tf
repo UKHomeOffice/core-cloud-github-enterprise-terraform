@@ -69,18 +69,16 @@ variable "github_backup_image" {
   type        = string
 }
 
-variable "quay_username" {
-  description = "Quay username"
+variable "aws_region" {
+  description = "Aws region"
   type        = string
   sensitive   = true
 }
-
-variable "quay_password" {
-  description = "Quay password"
+variable "aws_account_id" {
+  description = "Aws account id"
   type        = string
   sensitive   = true
 }
-
 variable "ghe_hostname" {
   description = "GitHub Enterprise hostname"
   type        = string
@@ -184,4 +182,9 @@ variable "ses_domain_name" {
   description = "Domain name for SES configuration"
   type        = string
   default     = ""
+}
+variable "enable_instance_role" {
+  description = "Enable creation of instance role"
+  type        = bool
+  default     = false
 }
