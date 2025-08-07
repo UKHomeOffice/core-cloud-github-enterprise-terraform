@@ -74,7 +74,7 @@ variable "aws_region" {
   type        = string
   sensitive   = true
 }
-variable "aws_account_id" {
+variable "ecr_account_id" {
   description = "Aws account id"
   type        = string
   sensitive   = true

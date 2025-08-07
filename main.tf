@@ -1,9 +1,15 @@
 data "aws_caller_identity" "current" {}
 
-data "aws_iam_instance_profile" "external_instance_profile" {
+data "aws_iam_role" "instance_management_role" {
   count = var.enable_instance_role ? 0 : 1
-  name  = "ghes-instance-management-role"
+  name = "ghes-instance-management-role"
 }
+
+resource "aws_iam_instance_profile" "instance_management_profile" {
+  name = "ghes-instance-management-profile"
+  role = var.enable_instance_role ? aws_iam_role.instance_management_role[0].name : data.aws_iam_role.instance_management_role[0].name
+}
+
 
 resource "aws_iam_role" "instance_management_role" {
   count = var.enable_instance_role ? 1 : 0
@@ -21,39 +27,33 @@ resource "aws_iam_role" "instance_management_role" {
   })
 }
 
-resource "aws_iam_instance_profile" "instance_management_profile" {
-  count = var.enable_instance_role ? 1 : 0
-  name  = "github-instance-management-profile"
-  role  = aws_iam_role.instance_management_role.name
-}
-
 resource "aws_iam_role_policy_attachment" "ssm_logging_policy_attachment" {
   count      = var.enable_instance_role ? 1 : 0
-  role       = aws_iam_role.instance_management_role.name
+  role       = aws_iam_role.instance_management_role[0].name
   policy_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${var.ssm_logging_policy_name}"
 }
 
 resource "aws_iam_role_policy_attachment" "ssm_core" {
   count      = var.enable_instance_role ? 1 : 0
-  role       = aws_iam_role.instance_management_role.name
+  role       = aws_iam_role.instance_management_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
   count      = var.enable_instance_role ? 1 : 0
-  role       = aws_iam_role.instance_management_role.name
+  role       = aws_iam_role.instance_management_role[0].name  
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "cloudwatch_logs" {
   count      = var.enable_instance_role ? 1 : 0
-  role       = aws_iam_role.instance_management_role.name
+  role       = aws_iam_role.instance_management_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
 resource "aws_iam_role_policy_attachment" "route_53_policy" {
   count      = var.enable_instance_role ? 1 : 0
-  role       = aws_iam_role.instance_management_role.name
+  role       = aws_iam_role.instance_management_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonRoute53FullAccess"
 }
 
@@ -79,8 +79,8 @@ resource "aws_iam_policy" "ssm_parameter_access" {
 
 resource "aws_iam_role_policy_attachment" "ssm_parameter_policy_attachment" {
   count      = var.enable_instance_role ? 1 : 0
-  role       = aws_iam_role.instance_management_role.name
-  policy_arn = aws_iam_policy.ssm_parameter_access.arn
+  role       = aws_iam_role.instance_management_role[0].name
+  policy_arn = aws_iam_policy.ssm_parameter_access[0].arn
 }
 
 resource "aws_iam_policy" "backup_host_s3_access" {
@@ -115,8 +115,8 @@ resource "aws_iam_policy" "backup_host_s3_access" {
 
 resource "aws_iam_role_policy_attachment" "backup_host_s3_access_attachment" {
   count      = var.enable_instance_role ? 1 : 0
-  role       = aws_iam_role.instance_management_role.name
-  policy_arn = aws_iam_policy.backup_host_s3_access.arn
+  role       = aws_iam_role.instance_management_role[0].name
+  policy_arn = aws_iam_policy.backup_host_s3_access[0].arn
 }
 
 resource "aws_security_group" "nlb_sg" {
@@ -318,7 +318,7 @@ resource "aws_instance" "github_instance" {
 
   associate_public_ip_address = var.public_ip
 
-  iam_instance_profile = var.enable_instance_role ? aws_iam_instance_profile.instance_management_profile[0].name : data.aws_iam_instance_profile.external_instance_profile[0].name
+  iam_instance_profile = aws_iam_instance_profile.instance_management_profile.name
 
   root_block_device {
     volume_size           = var.root_volume_size
@@ -433,7 +433,7 @@ resource "aws_instance" "backup_host" {
 
   associate_public_ip_address = var.public_ip
 
-  iam_instance_profile = var.enable_instance_role ? aws_iam_instance_profile.instance_management_profile[0].name : data.aws_iam_instance_profile.external_instance_profile[0].name
+  iam_instance_profile = aws_iam_instance_profile.instance_management_profile.name
 
   root_block_device {
     volume_size = var.backup_root_volume_size
@@ -485,7 +485,7 @@ resource "aws_instance" "backup_host" {
     sudo systemctl start amazon-cloudwatch-agent
 
     # Authenticate with AWS ECR
-    aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${var.aws_account_id}.dkr.ecr.${var.aws_region}.amazonaws.com
+    aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${var.ecr_account_id}.dkr.ecr.${var.aws_region}.amazonaws.com
     docker pull ${var.github_backup_image}
   
     chown ubuntu:ubuntu /home/ubuntu/.ssh
