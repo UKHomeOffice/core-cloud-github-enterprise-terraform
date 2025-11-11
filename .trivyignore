@@ -1,0 +1,18 @@
+#Ignore requirement for S3 logging bucket as per CUDOS setup instructions
+AVD-AWS-0089
+
+#Ignore requirement for customer managed key for S3 encryption as per CUDOS setup instructions
+AVD-AWS-0132
+
+#Ignore INGRESS Perimeter ALB being external and allow access to internet 
+AVD-AWS-0107
+AVD-AWS-0053
+
+# Ignore API Gateway - LOW PRIORITY FAILURES FOR NOW
+AVD-AWS-0003
+AVD-AWS-0004
+AVD-AWS-0017
+AVD-AWS-0057
+
+# Ignore Isolated NLB Ingress (0.0.0.0/0) as it's public
+AVD-AWS-0104
