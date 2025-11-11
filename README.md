@@ -80,7 +80,6 @@ The following GitHub Actions workflows manage version control hygiene and code v
 | [`.github/workflows/pull-request-semver-label-check.yaml`](.github/workflows/pull-request-semver-label-check.yaml) | Ensures each pull request includes an appropriate **Semantic Version (SemVer)** label (`major`, `minor`, or `patch`) before merge. |
 | [`.github/workflows/pull-request-semver-tag-merge.yaml`](.github/workflows/pull-request-semver-tag-merge.yaml)     | Automatically applies a **SemVer tag** to the main branch when changes are merged, enabling versioned module releases.             |
 
-
 ### How It Works
 
 * When a pull request is opened, **Trivy** validates Terraform code and scans for common vulnerabilities.
@@ -93,9 +92,7 @@ The following GitHub Actions workflows manage version control hygiene and code v
 terraform {
   source = "git::https://github.com/UKHomeOffice/core-cloud-github-enterprise-terraform//?ref=v1.5.0"
 }
-
 ```
-
 📈 CI/CD Flow Overview
 
 graph LR
