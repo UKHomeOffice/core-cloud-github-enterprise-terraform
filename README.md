@@ -1,71 +1,113 @@
-# core-cloud-github-enterprise-terraform-module
+# Core Cloud GitHub Enterprise Terraform Module
 
-## Module Usage
+This repository contains the core Terraform modules for the Core Cloud Github Enterprise.
 
-```hcl
-module "github_enterprise" {
-  source                = "git::https://github.com/UKHomeOffice/core-cloud-github-enterprise-terraform?ref=initial-commit"
+## Repository Structure
 
-  ssm_logging_policy_name = "ssm-logging-policy"
-  s3_bucket               = "ghes-backup-bucket-name"
-  vpc_id                  = "vpc-0123456789"
-  allowed_cidr_ingress    = ["10.0.0.0/16"]
-  use_private_subnets     = true
-  public_subnet_ids       = ["subnet-id", "subnet-id"]
-  private_subnet_ids      = ["subnet-id", "subnet-id"]
-  ami_id                  = "ami-id"
-  instance_type           = "r5.xlarge"
-  key_name                = "my-ssh-key"
-  root_volume_size        = 100
-  ebs_volume_size         = 500
-  public_ip               = false
-  cloudwatch_config       = "AmazonCloudWatch-github-enterprise-config"
-  quay_username           = "my-quay-username"
-  quay_password           = "my-quay-password"
-  github_backup_image     = "quay.io/ukho/github-backup:v1.0"
-  sns_email               = "alerts@ho.com"
-  environment             = "test"
-  route53_zone_name       = "ho.com"
-  route53_record_name     = "ghes.ho.com"
-  primary_weight          = 100
-  secondary_weight        = 0
-  backup_host_ami_id      = "ami-0987654321abcdef"
-  backup_host_instance_type = "t3.medium"
-  backup_root_volume_size = 30
-  create_ses_config       = true
-  ses_domain_name         = "email.prelive.ci.core.homeoffice.gov.uk"
-}
+```text
+── .github
+│   ├── CODEOWNERS
+│   ├── ISSUE_TEMPLATE
+│   │   ├── bug_report.md
+│   │   └── feature_request.md
+│   ├── labels.yml
+│   ├── PULL_REQUEST_TEMPLATE.md
+│   └── workflows
+│       ├── pull-request-sast.yaml
+│       ├── pull-request-semver-label-check.yaml
+│       └── pull-request-semver-tag-merge.yaml
+├── catalog-info.yaml
+├── CODE_OF_CONDUCT.md
+├── CODEOWNERS
+├── CONTRIBUTING.md
+├── modules
+│   └── core-cloud-ghes-terraform
+│       ├── main.tf
+│       ├── outputs.tf
+│       ├── README.md
+│       └── variables.tf
+└── README.md
 ```
 
-## Inputs
+The following modules are available:
 
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| <a name="input_ami_id"></a> [ami\_id](#input\_ami_id) | AMI ID for the GitHub Enterprise Server instances | `string` | n/a | yes |
-| <a name="input_allowed_cidr_ingress"></a> [allowed\_cidr\_ingress](#input\_allowed_cidr_ingress) | CIDR blocks allowed for ingress | `string` | n/a | yes |
-| <a name="input_backup_host_ami_id"></a> [backup\_host_ami_id](#input\_backup_host_ami_id) | AMI ID for the backup host | `string` | n/a | yes |
-| <a name="input_backup_host_instance_type"></a> [backup\_host_instance_type](#input\_backup_host_instance_type) | Instance type for the backup host | `string` | `"m5.2xlarge"` | no |
-| <a name="input_backup_root_volume_size"></a> [backup\_root_volume_size](#input\_backup_root_volume_size) | Size of the root EBS volume for the backup host in GB | `number` | n/a | yes |
-| <a name="input_cloudwatch_config"></a> [cloudwatch\_config](#input\_cloudwatch_config) | SSM parameter for CloudWatch config | `string` | n/a | yes |
-| <a name="input_ebs_volume_size"></a> [ebs\_volume_size](#input_ebs_volume_size) | Size of the attached EBS data volume in GB | `number` | n/a | yes |
-| <a name="input_environment"></a> [environment](#input\_environment) | Environment name (e.g., dev, prod) | `string` | n/a | yes |
-| <a name="input_github_backup_image"></a> [github\_backup_image](#input\_github_backup_image) | Docker image for GitHub backup | `string` | n/a | yes |
-| <a name="input_instance_type"></a> [instance\_type](#input_instance_type) | EC2 instance type for GitHub Enterprise Server | `string` | `"r5.2xlarge"` | no |
-| <a name="input_key_name"></a> [key_name](#input_key_name) | SSH key name for the instances | `string` | n/a | yes |
-| <a name="input_primary_weight"></a> [primary\_weight](#input_primary_weight) | Weight for the primary Route53 record | `number` | `100` | no |
-| <a name="input_private_subnet_ids"></a> [private\_subnet_ids](#input_private_subnet_ids) | List of private subnet IDs for the NLB | `list(string)` | n/a | yes |
-| <a name="input_public_ip"></a> [public\_ip](#input_public_ip) | Whether to assign a public IP to the instances | `bool` | `false` | no |
-| <a name="input_public_subnet_ids"></a> [public\_subnet_ids](#input_public_subnet_ids) | List of public subnet IDs for the NLB | `list(string)` | n/a | yes |
-| <a name="input_quay_password"></a> [quay\_password](#input_quay_password) | Quay password for pulling GitHub backup container | `string` | n/a | yes |
-| <a name="input_quay_username"></a> [quay\_username](#input_quay_username) | Quay username for pulling GitHub backup container | `string` | n/a | yes |
-| <a name="input_route53_record_name"></a> [route53\_record_name](#input_route53_record_name) | Route53 record name for GitHub Enterprise | `string` | `""` | no |
-| <a name="input_route53_zone_name"></a> [route53\_zone_name](#input_route53_zone_name) | Route53 zone name for DNS records | `string` | `""` | no |
-| <a name="input_root_volume_size"></a> [root\_volume_size](#input_root_volume_size) | Size of the root EBS volume in GB | `number` | n/a | yes |
-| <a name="input_secondary_weight"></a> [secondary\_weight](#input_secondary_weight) | Weight for the secondary Route53 record | `number` | `0` | no |
-| <a name="input_s3_bucket"></a> [s3_bucket](#input_s3_bucket) | Name of the S3 bucket for backups | `string` | n/a | yes |
-| <a name="input_sns_email"></a> [sns_email](#input_sns_email) | Email to receive CloudWatch alarm notifications | `string` | n/a | yes |
-| <a name="input_ssm_logging_policy_name"></a> [ssm\_logging\_policy_name](#input_ssm_logging_policy_name) | Name of the SSM logging policy | `string` | n/a | yes |
-| <a name="input_use_private_subnets"></a> [use_private_subnets](#input_use_private_subnets) | Flag to use private subnets for the NLB | `bool` | `n/a` | no |
-| <a name="input_vpc_id"></a> [vpc_id](#input_vpc_id) | ID of the VPC where resources are deployed | `string` | n/a | yes |
-| <a name="input_create_ses_config"></a> [create\_ses\_config](#input\_create_ses_config) | Flag to create SES configuration | `bool` | `false` | no |
-| <a name="input_ses_domain_name"></a> [ses\_domain\_name](#input\_ses_domain_name) | Domain name for SES configuration | `string` | `""` | no |
+- [AWS](./modules/aws/README.md) # Need to update this part to include path to the modules directory
+
+## Example Usage
+Example usage can be found in the README of the module. 
+
+
+## Static Analysis and Code Quality
+
+This repository is automatically scanned by `Checkov` and `SonarQube` through GitHub Actions workflows located in `.github/workflows/checkov-sonar-scan.yaml`
+
+### Checkov Security and Compliance Scan
+
+* Runs on every *Pull Request* and *push* to `main` that modifies files under `modules/core-cloud-ghes-terraform/`.
+
+* Uses the internal reusable workflow: `UKHomeOffice/core-cloud-workflow-checkov-sast-scan@1.7.0.`
+
+* Performs Infrastructure-as-Code (IaC) *security, compliance, and policy validation* against Terraform configurations.
+
+Results are visible under the **Actions** tab in the job summary (and optionally in GitHub’s **Code Scanning Alerts** view).
+
+### SonarQube Code Quality Scan
+
+* Uses the internal action: `UKHomeOffice/core-cloud-workflow-sonarqube-scan@1.1.4.`
+
+* Analyzes Terraform code quality, maintainability, and duplication metrics for the `modules/core-cloud-ghes-terraform directory`.
+
+* The scan results are available in the **SonarQube dashboard** at:
+🔗 https://sonarqube.cc-platform-ops-tooling-live-1.core.homeoffice.gov.uk
+
+### Enforcement Level
+
+* Both **Checkov** and **SonarQube** currently run in **advisory** mode.
+
+    * Checkov: reports policy violations but does not **block merges** in this repository.
+
+    * SonarQube: quality gate status is evaluated but **not enforced** as a merge gate.
+
+* These scans provide early visibility into security and quality issues in shared Terraform modules consumed by other infrastructure repositories.
+
+### Semantic Versioning and Trivy Scan
+In addition to static analysis, this repository enforces semantic versioning and performs Terraform validation using Trivy.
+The following GitHub Actions workflows manage version control hygiene and code validation:
+
+| Workflow File                                                                                                      | Purpose                                                                                                                            |
+| :----------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
+| [`.github/workflows/pull-request-sast.yaml`](.github/workflows/pull-request-sast.yaml)                             | Runs a **Trivy** scan to validate Terraform syntax and detect security misconfigurations in pull requests.                         |
+| [`.github/workflows/pull-request-semver-label-check.yaml`](.github/workflows/pull-request-semver-label-check.yaml) | Ensures each pull request includes an appropriate **Semantic Version (SemVer)** label (`major`, `minor`, or `patch`) before merge. |
+| [`.github/workflows/pull-request-semver-tag-merge.yaml`](.github/workflows/pull-request-semver-tag-merge.yaml)     | Automatically applies a **SemVer tag** to the main branch when changes are merged, enabling versioned module releases.             |
+
+
+### How It Works
+
+* When a pull request is opened, **Trivy** validates Terraform code and scans for common vulnerabilities.
+
+* The **SemVer label check** ensures versioning discipline is maintained across releases.
+
+* Upon merge to `main`, a **SemVer tag** is generated (e.g., `v1.5.0`), which can then be referenced by   Terragrunt and other consumer repositories via:
+
+```hcl
+terraform {
+  source = "git::https://github.com/UKHomeOffice/core-cloud-github-enterprise-terraform//?ref=v1.5.0"
+}
+
+```
+
+📈 CI/CD Flow Overview
+
+graph LR
+  A[Pull Request Opened] --> B[Trivy Validation (SAST)]
+  A --> C[Checkov Scan]
+  A --> D[SonarQube Scan]
+  B --> E[SemVer Label Check]
+  C --> E
+  D --> E
+  E --> F[Merge to main]
+  F --> G[SemVer Tag Applied]
+
+### Flow Summary:
+Pull requests trigger Trivy, Checkov, and SonarQube scans for validation and quality checks.
+After successful scans and a SemVer label verification, merges to main automatically create a semantic version tag, ready to be consumed by downstream Terragrunt configurations.

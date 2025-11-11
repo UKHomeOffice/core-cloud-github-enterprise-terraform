@@ -1,0 +1,15 @@
+- name: dependencies
+  color: #82B602
+  description: "Updates or changes to project dependencies (e.g. library, module, or provider version bumps)"
+- name: major
+  color: #B60205
+  description: "Implementation of incompatible changes"
+- name: minor
+  color: #1D76DB
+  description: "New / changed functionality implemented in a backwards compatible way"
+- name: patch
+  color: #0E8A16
+  description: "Backwards compatible bug fixes"
+- name: skip-release
+  color: #FBCA04
+  description: "Non-code changes"
