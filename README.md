@@ -31,7 +31,7 @@ This repository contains the core Terraform modules for the Core Cloud Github En
 
 The following modules are available:
 
-- [AWS](./modules/aws/README.md) # Need to update this part to include path to the modules directory
+- [Core Cloud GHES Terraform Module](./modules/core-cloud-ghes-terraform/)
 
 ## Example Usage
 Example usage can be found in the README of the module. 
@@ -95,6 +95,9 @@ terraform {
 ```
 📈 CI/CD Flow Overview
 
+The diagram below illustrates the end-to-end workflow automation for pull requests and merges.
+
+```mermaid
 graph LR
   A[Pull Request Opened] --> B[Trivy Validation (SAST)]
   A --> C[Checkov Scan]
@@ -104,6 +107,8 @@ graph LR
   D --> E
   E --> F[Merge to main]
   F --> G[SemVer Tag Applied]
+
+```
 
 ### Flow Summary:
 Pull requests trigger Trivy, Checkov, and SonarQube scans for validation and quality checks.
