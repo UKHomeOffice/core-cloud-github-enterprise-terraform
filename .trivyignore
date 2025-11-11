@@ -1,0 +1,11 @@
+#Ignore requirement for S3 logging bucket as per CUDOS setup instructions
+AVD-AWS-0089
+
+#Ignore requirement for customer managed key for S3 encryption as per CUDOS setup instructions
+AVD-AWS-0132
+
+#Inore requirement for IMDS v2 (Instance Metadata Service)
+AVD-AWS-0028
+
+#Ignore SNS Topic does not have encryption enabled.
+AVD-AWS-0095
