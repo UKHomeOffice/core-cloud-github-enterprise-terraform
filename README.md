@@ -108,7 +108,6 @@ graph LR
   E --> F[Merge to main]
   F --> G[SemVer Tag Applied]
 
-```
 
 ### Flow Summary:
 Pull requests trigger Trivy, Checkov, and SonarQube scans for validation and quality checks.
