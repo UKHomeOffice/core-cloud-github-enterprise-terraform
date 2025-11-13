@@ -4,7 +4,7 @@
 
 ```hcl
 module "github_enterprise" {
-  source                = "git::https://github.com/UKHomeOffice/core-cloud-github-enterprise-terraform?ref=initial-commit"
+  source                = "git::https://github.com/UKHomeOffice/core-cloud-github-enterprise-terraform?ref=v1.6.0"
 
   ssm_logging_policy_name = "ssm-logging-policy"
   s3_bucket               = "ghes-backup-bucket-name"
