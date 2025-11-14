@@ -26,13 +26,13 @@ jobs:
         id: semver
         uses: UKHomeOffice/match-label-action@v1
         with:
-          labels: semver:major,semver:minor,semver:patch
+          labels: semver:major,major,semver:minor,minor,semver:patch,patch
           mode: singular
 
       - name: Fail if no SemVer label
-        if: steps.semver.outputs.matched == ''
+        if: ${{ steps.semver.outputs.matched == '' }}
         run: |
-          echo "::error::Missing SemVer label. Add one of: semver:major, semver:minor, semver:patch."
+          echo "::error::Missing SemVer label. Add one of: semver:major, semver:minor, semver:patch (or major/minor/patch)."
           exit 1
 
       # Calculate the next base version (stable) from the SemVer label
@@ -40,8 +40,8 @@ jobs:
         id: calc
         uses: UKHomeOffice/semver-calculate-action@v2
         with:
-          # Map label value to increment
-          increment: ${{ fromJSON('{"semver:major":"major","semver:minor":"minor","semver:patch":"patch"}')[steps.semver.outputs.matched] }}
+          increment: >-
+            ${{ fromJSON('{"semver:major":"major","major":"major","semver:minor":"minor","minor":"minor","semver:patch":"patch","patch":"patch"}')[steps.semver.outputs.matched] }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       # Determine RC sequence and create tag vX.Y.Z-rc.N on this PR commit
