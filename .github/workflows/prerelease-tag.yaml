@@ -1,0 +1,100 @@
+name: Pre-release (RC) Tag
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+    branches: [main]
+
+permissions:
+  contents: write   # needed to create/push tags
+  actions: read
+  pull-requests: read
+
+jobs:
+  rc_tag:
+    # Only run if the PR has the 'pre-release' label
+    if: contains(github.event.pull_request.labels.*.name, 'pre-release')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # must fetch tags for RC numbering
+
+      # Determine SemVer increment from labels (major / minor / patch)
+      - name: Determine SemVer increment
+        id: semver
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          labels="${{ join(github.event.pull_request.labels.*.name, ',') }}"
+          echo "PR labels: $labels"
+
+          count=0
+          inc=""
+
+          for candidate in major minor patch; do
+            if [[ ",$labels," == *",$candidate,"* ]]; then
+              inc="$candidate"
+              count=$((count+1))
+            fi
+          done
+
+          if [[ $count -eq 0 ]]; then
+            echo "::error::Missing SemVer label. Add exactly one of: major, minor, patch."
+            exit 1
+          fi
+
+          if [[ $count -gt 1 ]]; then
+            echo "::error::Multiple SemVer labels detected. Use only one of: major, minor, patch."
+            exit 1
+          fi
+
+          echo "increment=$inc" >> "$GITHUB_OUTPUT"
+          echo "Using increment: $inc"
+
+      # Calculate the next base version (stable) from the SemVer label
+      - name: Calculate next base version
+        id: calc
+        uses: UKHomeOffice/semver-calculate-action@v2
+        with:
+          increment: ${{ steps.semver.outputs.increment }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Determine RC sequence and create tag vX.Y.Z-rc.N on this PR commit
+      - name: Tag pre-release
+        env:
+          BASE: v${{ steps.calc.outputs.version }}
+          SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+
+          # Configure git identity for tagging
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          echo "Base version for RC: ${BASE}"
+          echo "Commit SHA: ${SHA}"
+
+          # If this SHA already has an RC tag for this BASE, skip
+          existing_for_sha=$(git tag --points-at "$SHA" | grep -E "^${BASE}-rc\.[0-9]+$" || true)
+          if [ -n "$existing_for_sha" ]; then
+            echo "RC tag already exists on this commit: ${existing_for_sha}"
+            exit 0
+          fi
+
+          # Find the latest rc number for this BASE
+          last_rc=$(git tag --list "${BASE}-rc.*" | sed -E 's/.*-rc\.([0-9]+)/\1/' | sort -n | tail -n1)
+          if [[ -z "$last_rc" ]]; then
+            next=1
+          else
+            next=$((last_rc+1))
+          fi
+
+          tag="${BASE}-rc.${next}"
+          echo "Creating RC tag ${tag} for commit ${SHA}"
+          git tag -a "${tag}" -m "Pre-release: ${tag}"
+          git push origin "${tag}"
