@@ -99,7 +99,7 @@ The diagram below illustrates the end-to-end workflow automation for pull reques
 
 ```mermaid
 graph LR
-  A[Pull Request Opened] --> B[Trivy Validation (SAST)]
+  A[Pull Request Opened] --> B[Trivy Validation SAST]
   A --> C[Checkov Scan]
   A --> D[SonarQube Scan]
   B --> E[SemVer Label Check]
@@ -107,6 +107,7 @@ graph LR
   D --> E
   E --> F[Merge to main]
   F --> G[SemVer Tag Applied]
+```
 
 
 ### Flow Summary:
