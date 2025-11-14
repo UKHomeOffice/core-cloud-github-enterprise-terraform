@@ -19,29 +19,47 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # must fetch tags
+          fetch-depth: 0   # must fetch tags for RC numbering
 
-      # Parse the increment (exactly one must be present)
-      - name: Parse SemVer increment
+      # Determine SemVer increment from labels (major / minor / patch)
+      - name: Determine SemVer increment
         id: semver
-        uses: UKHomeOffice/match-label-action@v1
-        with:
-          labels: semver:major,major,semver:minor,minor,semver:patch,patch
-          mode: singular
-
-      - name: Fail if no SemVer label
-        if: ${{ steps.semver.outputs.matched == '' }}
+        shell: bash
         run: |
-          echo "::error::Missing SemVer label. Add one of: semver:major, semver:minor, semver:patch (or major/minor/patch)."
-          exit 1
+          set -euo pipefail
+
+          labels="${{ join(github.event.pull_request.labels.*.name, ',') }}"
+          echo "PR labels: $labels"
+
+          count=0
+          inc=""
+
+          for candidate in major minor patch; do
+            if [[ ",$labels," == *",$candidate,"* ]]; then
+              inc="$candidate"
+              count=$((count+1))
+            fi
+          done
+
+          if [[ $count -eq 0 ]]; then
+            echo "::error::Missing SemVer label. Add exactly one of: major, minor, patch."
+            exit 1
+          fi
+
+          if [[ $count -gt 1 ]]; then
+            echo "::error::Multiple SemVer labels detected. Use only one of: major, minor, patch."
+            exit 1
+          fi
+
+          echo "increment=$inc" >> "$GITHUB_OUTPUT"
+          echo "Using increment: $inc"
 
       # Calculate the next base version (stable) from the SemVer label
       - name: Calculate next base version
         id: calc
         uses: UKHomeOffice/semver-calculate-action@v2
         with:
-          increment: >-
-            ${{ fromJSON('{"semver:major":"major","major":"major","semver:minor":"minor","minor":"minor","semver:patch":"patch","patch":"patch"}')[steps.semver.outputs.matched] }}
+          increment: ${{ steps.semver.outputs.increment }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       # Determine RC sequence and create tag vX.Y.Z-rc.N on this PR commit
@@ -49,9 +67,13 @@ jobs:
         env:
           BASE: v${{ steps.calc.outputs.version }}
           SHA: ${{ github.sha }}
+        shell: bash
         run: |
           set -euo pipefail
           git fetch --tags --force
+
+          echo "Base version for RC: ${BASE}"
+          echo "Commit SHA: ${SHA}"
 
           # If this SHA already has an RC tag for this BASE, skip
           existing_for_sha=$(git tag --points-at "$SHA" | grep -E "^${BASE}-rc\.[0-9]+$" || true)
@@ -62,7 +84,11 @@ jobs:
 
           # Find the latest rc number for this BASE
           last_rc=$(git tag --list "${BASE}-rc.*" | sed -E 's/.*-rc\.([0-9]+)/\1/' | sort -n | tail -n1)
-          if [ -z "$last_rc" ]; then next=1; else next=$((last_rc+1)); fi
+          if [[ -z "$last_rc" ]]; then
+            next=1
+          else
+            next=$((last_rc+1))
+          fi
 
           tag="${BASE}-rc.${next}"
           echo "Creating RC tag ${tag} for commit ${SHA}"
