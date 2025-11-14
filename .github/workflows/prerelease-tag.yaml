@@ -1,0 +1,70 @@
+name: Pre-release (RC) Tag
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+    branches: [main]
+
+permissions:
+  contents: write   # needed to create/push tags
+  actions: read
+  pull-requests: read
+
+jobs:
+  rc_tag:
+    # Only run if the PR has the 'pre-release' label
+    if: contains(github.event.pull_request.labels.*.name, 'pre-release')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # must fetch tags
+
+      # Parse the increment (exactly one must be present)
+      - name: Parse SemVer increment
+        id: semver
+        uses: UKHomeOffice/match-label-action@v1
+        with:
+          labels: semver:major,semver:minor,semver:patch
+          mode: singular
+
+      - name: Fail if no SemVer label
+        if: steps.semver.outputs.matched == ''
+        run: |
+          echo "::error::Missing SemVer label. Add one of: semver:major, semver:minor, semver:patch."
+          exit 1
+
+      # Calculate the next base version (stable) from the SemVer label
+      - name: Calculate next base version
+        id: calc
+        uses: UKHomeOffice/semver-calculate-action@v2
+        with:
+          # Map label value to increment
+          increment: ${{ fromJSON('{"semver:major":"major","semver:minor":"minor","semver:patch":"patch"}')[steps.semver.outputs.matched] }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Determine RC sequence and create tag vX.Y.Z-rc.N on this PR commit
+      - name: Tag pre-release
+        env:
+          BASE: v${{ steps.calc.outputs.version }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+
+          # If this SHA already has an RC tag for this BASE, skip
+          existing_for_sha=$(git tag --points-at "$SHA" | grep -E "^${BASE}-rc\.[0-9]+$" || true)
+          if [ -n "$existing_for_sha" ]; then
+            echo "RC tag already exists on this commit: ${existing_for_sha}"
+            exit 0
+          fi
+
+          # Find the latest rc number for this BASE
+          last_rc=$(git tag --list "${BASE}-rc.*" | sed -E 's/.*-rc\.([0-9]+)/\1/' | sort -n | tail -n1)
+          if [ -z "$last_rc" ]; then next=1; else next=$((last_rc+1)); fi
+
+          tag="${BASE}-rc.${next}"
+          echo "Creating RC tag ${tag} for commit ${SHA}"
+          git tag -a "${tag}" -m "Pre-release: ${tag}"
+          git push origin "${tag}"
