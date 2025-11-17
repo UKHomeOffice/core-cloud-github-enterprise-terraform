@@ -10,39 +10,49 @@ resource "aws_iam_instance_profile" "instance_management_profile" {
   role = var.enable_instance_role ? aws_iam_role.instance_management_role[0].name : data.aws_iam_role.instance_management_role[0].name
 }
 
+data "aws_iam_policy_document" "instance_management_extra_policy" {
+  statement {
+    effect = "Allow"
 
-resource "aws_iam_role" "instance_management_role" {
-  count = var.enable_instance_role ? 1 : 0
-  name  = "github-instance-management-role"
+    principals {
+      type        = "Federated"
+      identifiers = [
+        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
+      ]
+    }
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        },
-        Action = "sts:AssumeRole"
-      },
-      {
-        Effect = "Allow",
-        Principal = {
-          Federated = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
-        },
-        Action = "sts:AssumeRoleWithWebIdentity",
-        Condition = {
-          StringEquals = {
-            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          },
-          StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:UKHomeOffice/core-cloud-ghes-terragrunt:*"
-          }
-        }
-      }
+    actions = [
+      "sts:AssumeRoleWithWebIdentity"
     ]
-  })
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = [
+        "repo:UKHomeOffice/core-cloud-ghes-terragrunt:*"
+      ]
+    }
+  }
 }
+
+resource "aws_iam_policy" "instance_management_extra_policy" {
+  name        = "ghes-instance-management-extra-policy"
+  description = "OIDC permissions for GitHub Actions deployments"
+
+  policy = data.aws_iam_policy_document.instance_management_extra_policy.json
+}
+
+resource "aws_iam_role_policy_attachment" "instance_management_extra_policy_attachment" {
+  role       = data.aws_iam_role.instance_management_role[0].name
+  policy_arn = aws_iam_policy.instance_management_extra_policy.arn
+}
+
 
 resource "aws_iam_role_policy_attachment" "ssm_logging_policy_attachment" {
   count      = var.enable_instance_role ? 1 : 0
