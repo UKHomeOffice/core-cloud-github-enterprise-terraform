@@ -11,6 +11,39 @@ resource "aws_iam_instance_profile" "instance_management_profile" {
 }
 
 
+resource "aws_iam_role" "instance_management_role" {
+  count = var.enable_instance_role ? 1 : 0
+  name  = "github-instance-management-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      },
+      {
+        Effect = "Allow",
+        Principal = {
+          Federated = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
+        },
+        Action = "sts:AssumeRoleWithWebIdentity",
+        Condition = {
+          StringEquals = {
+            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+          },
+          StringLike = {
+            "token.actions.githubusercontent.com:sub" = "repo:UKHomeOffice/core-cloud-ghes-terragrunt:*"
+          }
+        }
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role_policy_attachment" "ssm_logging_policy_attachment" {
   count      = var.enable_instance_role ? 1 : 0
   role       = aws_iam_role.instance_management_role[0].name
