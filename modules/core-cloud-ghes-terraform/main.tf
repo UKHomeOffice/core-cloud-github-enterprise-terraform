@@ -11,22 +11,6 @@ resource "aws_iam_instance_profile" "instance_management_profile" {
 }
 
 
-resource "aws_iam_role" "instance_management_role" {
-  count = var.enable_instance_role ? 1 : 0
-  name  = "github-instance-management-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Principal = {
-        Service = "ec2.amazonaws.com"
-      },
-      Action = "sts:AssumeRole"
-    }]
-  })
-}
-
 resource "aws_iam_role_policy_attachment" "ssm_logging_policy_attachment" {
   count      = var.enable_instance_role ? 1 : 0
   role       = aws_iam_role.instance_management_role[0].name
