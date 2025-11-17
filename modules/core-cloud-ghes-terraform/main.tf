@@ -46,7 +46,7 @@ data "aws_iam_policy_document" "instance_management_assume_role" {
 
 resource "aws_iam_role_policy" "instance_management_trust_policy_update" {
   name   = "ghes-instance-management-trust-policy"
-  role   = data.aws_iam_role.instance_management_role.name
+  role   = data.aws_iam_role.instance_management_role[0].name
   policy = data.aws_iam_policy_document.instance_management_assume_role.json
 }
 
