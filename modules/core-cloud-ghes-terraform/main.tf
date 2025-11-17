@@ -325,6 +325,82 @@ resource "aws_vpc_security_group_egress_rule" "sg_outbound" {
   cidr_ipv4         = "0.0.0.0/0"
 }
 
+
+resource "aws_instance" "github_instance_just_temp" {
+  for_each               = aws_security_group.github_sg
+  ami                    = var.ami_id
+  instance_type          = var.instance_type
+  key_name               = var.key_name
+  subnet_id              = element(var.private_subnet_ids, tonumber(each.key) - 1)
+  vpc_security_group_ids = [each.value.id]
+
+  associate_public_ip_address = var.public_ip
+
+  iam_instance_profile = aws_iam_instance_profile.instance_management_profile.name
+
+  root_block_device {
+    volume_size           = var.root_volume_size
+    volume_type           = "gp3"
+    delete_on_termination = false
+    encrypted             = true
+  }
+
+  ebs_block_device {
+    device_name           = "/dev/sdb"
+    volume_size           = var.ebs_volume_size
+    volume_type           = "gp3"
+    delete_on_termination = false
+    encrypted             = true
+  }
+
+  user_data = <<-EOF
+  #!/bin/bash
+  export DEBIAN_FRONTEND=noninteractive
+
+  sudo apt-get update -y
+  sudo apt-get install -y docker.io wget curl unzip jq awscli
+
+  # Install SSM agent if not already installed
+  if ! systemctl list-units --full -all | grep -q "amazon-ssm-agent.service"; then
+    wget https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_amd64/amazon-ssm-agent.deb
+    sudo dpkg -i amazon-ssm-agent.deb
+  fi
+
+  # Enable and start SSM agent if not already enabled
+  if ! systemctl is-enabled amazon-ssm-agent &>/dev/null; then
+    sudo systemctl enable amazon-ssm-agent
+  fi
+
+  # Start SSM agent if not already active
+  if ! systemctl is-active --quiet amazon-ssm-agent; then
+    sudo systemctl start amazon-ssm-agent
+  fi
+
+  # Install CloudWatch agent if not already installed
+  if ! systemctl list-units --full -all | grep -q "amazon-cloudwatch-agent.service"; then
+    wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+    sudo dpkg -i amazon-cloudwatch-agent.deb
+  fi
+
+  # Fetch CloudWatch config from SSM Parameter Store and start agent
+  sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+      -a fetch-config -m ec2 -c ssm:${var.cloudwatch_config} -s
+
+  sudo systemctl enable amazon-cloudwatch-agent
+  sudo systemctl start amazon-cloudwatch-agent
+
+  EOF
+
+  tags = merge(
+    {
+      Name        = "github-enterprise-server-${each.key}",
+      MonitoredBy = "Dynatrace"
+    },
+    var.common_tags
+  )
+}
+
+
 resource "aws_instance" "github_instance" {
   for_each               = aws_security_group.github_sg
   ami                    = var.ami_id
