@@ -93,23 +93,101 @@ terraform {
   source = "git::https://github.com/UKHomeOffice/core-cloud-github-enterprise-terraform//?ref=v1.5.0"
 }
 ```
-📈 CI/CD Flow Overview
+📈 CI/CD Workflow Overview
 
-The diagram below illustrates the end-to-end workflow automation for pull requests and merges.
+This repository uses a fully automated CI/CD workflow to ensure that all Terraform module changes are scanned, validated, versioned, and released in a consistent and safe manner.
+
+The workflow includes:
+
+* Security and quality scanning
+
+* SemVer-based automated versioning
+
+* Pre-release (RC) tagging for testing changes before merging
+
+* Stable release tagging on merge to main
+
+The full process is illustrated below.
+
+📊 End-to-End CI/CD Flow (including RC Tags)
 
 ```mermaid
 graph LR
-  A[Pull Request Opened] --> B[Trivy Validation SAST]
+  A[Pull Request Opened] --> B[Trivy Scan]
   A --> C[Checkov Scan]
   A --> D[SonarQube Scan]
-  B --> E[SemVer Label Check]
-  C --> E
-  D --> E
-  E --> F[Merge to main]
-  F --> G[SemVer Tag Applied]
+  A --> E[SemVer Label Check]
+
+  E --> F{Pre-release label?}
+
+  F -- Yes --> G[Create RC Tag<br/>vX.Y.Z-rc.N]
+  F -- No --> H[No RC Tag Created]
+
+  G --> I[Terragrunt Can Consume RC Tag<br/>for Testing]
+  H --> I
+
+  E --> J[Merge to main]
+  J --> K[Stable Tag Created<br/>vX.Y.Z]
+  K --> L[Terragrunt Deploys Stable Release]
+
+```
+### 🔍 Summary:
+
+Every pull request runs full validation (Trivy, Checkov, SonarQube) and SemVer label checks.  
+Optional RC tags allow engineers to test module changes in Terragrunt before merging.  
+Merging to `main` automatically creates a stable SemVer release tag ready for downstream deployment.
+
+
+🏷️ Versioning & Release Strategy
+
+This repository follows Semantic Versioning (SemVer):
+
+| Label         | Meaning                           | Example Output |
+| ------------- | --------------------------------- | -------------- |
+| `major`       | Breaking changes                  | `v2.0.0`       |
+| `minor`       | Backwards-compatible changes      | `v1.7.0`       |
+| `patch`       | Fixes / safe updates              | `v1.6.1`       |
+| `pre-release` | Modifier used to generate RC tags | `v1.7.0-rc.1`  |
+
+
+🔹 Pre-Release (RC) Tags
+
+When a PR is labelled with:
+
+* Exactly one of: major, minor, or patch
+
+* Plus: pre-release
+
+Then the workflow automatically generates a pre-release tag:
+
+* `vX.Y.Z-rc.1`
+* `vX.Y.Z-rc.2`
+
+Engineers can use these RC tags in Terragrunt to test module changes before merging to main by calling it like this:
+
+```hcl
+terraform {
+  source = "git::https://github.com/UKHomeOffice/core-cloud-github-enterprise-terraform.git//modules/core-cloud-ghes-terraform?ref=vX.Y.Z-rc.N"
+}
+
 ```
 
+🔹 Stable Releases
 
-### Flow Summary:
-Pull requests trigger Trivy, Checkov, and SonarQube scans for validation and quality checks.
-After successful scans and a SemVer label verification, merges to main automatically create a semantic version tag, ready to be consumed by downstream Terragrunt configurations.
+Once the PR is approved and merged to main, the merge workflow automatically generates a stable SemVer tag: `vX.Y.Z`
+
+
+These stable tags are used for normal deployment through Terragrunt environments.
+
+🛡️ Security & Quality Scanning
+
+All PRs to this repository run:
+
+* **Trivy** – Terraform security & misconfiguration scanning
+
+* **Checkov** – Deep Terraform IaC policy scanning
+
+* **SonarQube** – Code quality and static analysis
+
+These scans are **advisory** and do not block merges, but all issues are visible in GitHub Actions and SonarQube dashboards.
+
