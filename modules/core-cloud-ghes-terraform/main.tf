@@ -10,21 +10,51 @@ resource "aws_iam_instance_profile" "instance_management_profile" {
   role = var.enable_instance_role ? aws_iam_role.instance_management_role[0].name : data.aws_iam_role.instance_management_role[0].name
 }
 
+data "aws_iam_policy_document" "instance_management_assume_role" {
+  statement {
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+    actions = ["sts:AssumeRole"]
+  }
+
+  statement {
+    effect = "Allow"
+    principals {
+      type        = "Federated"
+      identifiers = [
+        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
+      ]
+    }
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = ["repo:UKHomeOffice/core-cloud-ghes-terragrunt:*"]
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "instance_management_trust_policy_update" {
+  name   = "ghes-instance-management-trust-policy"
+  role   = data.aws_iam_role.instance_management_role[0].name
+  policy = data.aws_iam_policy_document.instance_management_assume_role.json
+}
 
 resource "aws_iam_role" "instance_management_role" {
   count = var.enable_instance_role ? 1 : 0
   name  = "github-instance-management-role"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Principal = {
-        Service = "ec2.amazonaws.com"
-      },
-      Action = "sts:AssumeRole"
-    }]
-  })
+  assume_role_policy = data.aws_iam_policy_document.instance_management_assume_role.json
 }
 
 resource "aws_iam_role_policy_attachment" "ssm_logging_policy_attachment" {
