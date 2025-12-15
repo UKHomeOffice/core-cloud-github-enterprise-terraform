@@ -6,16 +6,16 @@ This repository contains the core Terraform modules for the Core Cloud Github En
 
 ```text
 ── .github
-│   ├── CODEOWNERS
-│   ├── ISSUE_TEMPLATE
-│   │   ├── bug_report.md
-│   │   └── feature_request.md
-│   ├── labels.yml
-│   ├── PULL_REQUEST_TEMPLATE.md
-│   └── workflows
-│       ├── pull-request-sast.yaml
-│       ├── pull-request-semver-label-check.yaml
-│       └── pull-request-semver-tag-merge.yaml
+├── ISSUE_TEMPLATE
+│   ├── bug_report.md
+│   └── feature_request.md
+├── labels.yml
+├── PULL_REQUEST_TEMPLATE.md
+└── workflows
+|    ├── checkov-sonar-scan.yaml
+|    ├── prerelease-tag.yaml
+|    ├── pull-request-semver-label-check.yaml
+|    └── pull-request-semver-tag-merge.yaml
 ├── catalog-info.yaml
 ├── CODE_OF_CONDUCT.md
 ├── CODEOWNERS
@@ -76,13 +76,12 @@ The following GitHub Actions workflows manage version control hygiene and code v
 
 | Workflow File                                                                                                      | Purpose                                                                                                                            |
 | :----------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
-| [`.github/workflows/pull-request-sast.yaml`](.github/workflows/pull-request-sast.yaml)                             | Runs a **Trivy** scan to validate Terraform syntax and detect security misconfigurations in pull requests.                         |
 | [`.github/workflows/pull-request-semver-label-check.yaml`](.github/workflows/pull-request-semver-label-check.yaml) | Ensures each pull request includes an appropriate **Semantic Version (SemVer)** label (`major`, `minor`, or `patch`) before merge. |
 | [`.github/workflows/pull-request-semver-tag-merge.yaml`](.github/workflows/pull-request-semver-tag-merge.yaml)     | Automatically applies a **SemVer tag** to the main branch when changes are merged, enabling versioned module releases.             |
 
 ### How It Works
 
-* When a pull request is opened, **Trivy** validates Terraform code and scans for common vulnerabilities.
+* When a pull request is opened, **SAST Scan** validates Terraform code and scans for common vulnerabilities.
 
 * The **SemVer label check** ensures versioning discipline is maintained across releases.
 
@@ -113,8 +112,7 @@ The full process is illustrated below.
 
 ```mermaid
 graph LR
-  A[Pull Request Opened] --> B[Trivy Scan]
-  A --> C[Checkov Scan]
+  A[Pull Request Opened] --> C[Checkov Scan]
   A --> D[SonarQube Scan]
   A --> E[SemVer Label Check]
 
@@ -133,7 +131,7 @@ graph LR
 ```
 ### 🔍 Summary:
 
-Every pull request runs full validation (Trivy, Checkov, SonarQube) and SemVer label checks.  
+Every pull request runs full validation (Checkov, SonarQube) and SemVer label checks.  
 Optional RC tags allow engineers to test module changes in Terragrunt before merging.  
 Merging to `main` automatically creates a stable SemVer release tag ready for downstream deployment.
 
@@ -182,8 +180,6 @@ These stable tags are used for normal deployment through Terragrunt environments
 🛡️ Security & Quality Scanning
 
 All PRs to this repository run:
-
-* **Trivy** – Terraform security & misconfiguration scanning
 
 * **Checkov** – Deep Terraform IaC policy scanning
 
