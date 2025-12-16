@@ -1,10 +1,9 @@
 name: 'SemVer Tag on Main Merge'
+
 on:
   pull_request:
-    types:
-      - closed
-    branches:
-      - main
+    types: [closed]
+    branches: [main]
 
 permissions:
   pull-requests: read
@@ -24,6 +23,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # important for tags/versioning
 
       - name: Parse the SemVer label
         id: label
@@ -36,11 +37,13 @@ jobs:
         id: calculate
         uses: UKHomeOffice/semver-calculate-action@v2
         with:
-          increment: ${{ steps.label.outputs.matchedLabels }}
+          increment: ${{ steps.label.outputs.matched }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_to_highest: true
 
       - name: Tag Repository
         uses: UKHomeOffice/semver-tag-action@v4
         with:
-          tag: ${{ steps.calculate.outputs.version }}
+          tag: ${{ steps.calculate.outputs.version }}   # e.g. 1.0.1
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          move_major_tag: false
